@@ -12,8 +12,8 @@ from aliyunsdkrds.request.v20140815 import DescribeRegionsRequest
 
 class Check_Rds_Slow_Sql(object):
     def __init__(self,startTime):
-        self.accesskey="LTAIAvWjED7tEhhb"
-        self.accessSecret="UIkPkQRGvlsAiq5GGff9o5twqcvapx"
+        self.accesskey=""
+        self.accessSecret=""
         self.startTime=startTime
     def get_DescribeRegions(self):
         region_request=DescribeRegionsRequest.DescribeRegionsRequest()
