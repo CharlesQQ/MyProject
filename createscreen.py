@@ -3,10 +3,9 @@
 __author__ = 'Charles Chang'
 import json
 import urllib2
+import collections
 
 class CreateScreen(object):
-    def __init__(self,username):
-        self.username=username
 
     def login(self):
         data = {
@@ -37,63 +36,66 @@ class CreateScreen(object):
             result.close()
             return response
 
-    def __gethostIDs(self,hostname):
+    def __gethostIDs(self):
         data = {
             "jsonrpc": "2.0",
             "method": "host.get",
             "params": {
                 "output": "extend",
-                "filter": {
-                    "host": [
-                        hostname,
-                    ]
-                }
             },
             "auth": self.login(),
             "id": 1
         }
-        hostids = self.request(data)['result'][0]['hostid']
+        hostids=[]
+        hostname =[]
+        for item in self.request(data)['result']:
+            hostids.append(item['hostid'])
+            hostname.append(item['name'])
         return hostids
 
 
-    def __getgrapsID(self):
+    def getgrapsID(self):
         data = {
         "jsonrpc": "2.0",
         "method": "graph.get",
         "params": {
             "output": "extend",
-            "hostids": self.__gethostIDs(self.username),
+            "hostids": self.__gethostIDs(),
             "sortfield": "name"
         },
         "auth": self.login(),
         "id": 1
         }
-        grapid_list = []
-        for grapitem in self.request(data):
-            grapid_list.append(grapitem['graphid'])
-        return grapid_list,len(grapid_list)     #返回group名称列表和数量
+        grapid_dic = {}
+        for grapitem in self.request(data)['result']:
+            grapid_dic[grapitem['name']]=grapitem['graphid']
+        screenitems = collections.defaultdict(list)
+        for k,v in grapid_dic.items():
+            if k.startswith(u'容器'):
+                screenitems[k.split()[0]].append(v)
+        return screenitems    #返回group名称列表和数量
 
-    def create(self):
-        a,b = divmod(self.__getgrapsID()[1],2)
+    def create(self,username):        #根据graphid号创建screen
+        a,b = divmod(len(self.getgrapsID()[username]),2)
         hsize = a if b==0 else a+1
-        screenitems = []
-        for item in self.__getgrapsID()[0]:
-            screenitems.append({
+        screenitems_li=[]
+        for item in self.getgrapsID()[username]:
+            screenitems_li.append({
             "resourcetype": 0,
             "resourceid": item,
-            "rowspan": 0,
-            "colspan": 0,
-            "x": 0,
-            "y": 0}
+            "rowspan": 1,
+            "colspan": 1,
+            "x": len(screenitems_li) %2,
+            "y": len(screenitems_li)/2}
             )
         data ={
             "jsonrpc": "2.0",
             "method": "screen.create",
             "params": {
-                "name": "%s_screen" %self.username,
+                "name": "%s_screen" %username,
                 "hsize":hsize,
                 "vsize": 2,
-                "screenitems":screenitems,
+                "screenitems":screenitems_li,
             },
             "auth": self.login(),
             "id": 1
@@ -101,6 +103,24 @@ class CreateScreen(object):
         response=self.request(data)
         return response
 
+    def screenget(self):
+        data = {
+        "jsonrpc": "2.0",
+        "method": "screen.get",
+        "params": {
+            "output": "extend",
+        },
+        "auth": self.login(),
+        "id": 1
+    }
+        response = self.request(data)['result']
+        screenid_li = []
+        for item in response:
+            screenid_li.append(item['name'])
+        return screenid_li
+
 if __name__ == '__main__':
-    instance=CreateScreen("ZhuBang Docker_158.5")
-    instance.create()
+    instance=CreateScreen()
+    #instance.screenget()
+    for username in instance.getgrapsID().keys():
+         instance.create(username)
